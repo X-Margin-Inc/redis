@@ -1,3 +1,6 @@
+FROM redislabs/redistimeseries:edge as redistimeseries
+FROM redislabs/rejson:edge as rejson
+
 FROM alpine:3.9 as builder
 
 MAINTAINER Opstree Solutions
@@ -25,6 +28,15 @@ FROM alpine:3.9
 
 MAINTAINER Opstree Solutions
 
+ENV LD_LIBRARY_PATH /usr/lib/redis/modules
+ENV REDISGRAPH_DEPS gcompat
+ENV REDISTIMESERIES_DEPS libstdc++
+
+WORKDIR /data
+RUN set -ex; \
+    apk add --no-cache ${REDISTIMESERIES_DEPS}; \
+    apk add --no-cache ${REDISGRAPH_DEPS};
+
 LABEL VERSION=1.0 \
       ARCH=AMD64 \
       DESCRIPTION="A production grade performance tuned redis docker image created by Opstree Solutions"
@@ -32,6 +44,8 @@ LABEL VERSION=1.0 \
 COPY --from=builder /usr/local/bin/redis-server /usr/local/bin/redis-server
 COPY --from=builder /usr/local/bin/redis-cli /usr/local/bin/redis-cli
 COPY --from=builder /etc/redis /etc/redis
+COPY --from=redistimeseries ${LD_LIBRARY_PATH}/*.so ${LD_LIBRARY_PATH}/
+COPY --from=rejson ${LD_LIBRARY_PATH}/*.so ${LD_LIBRARY_PATH}/
 
 RUN addgroup -S -g 1001 redis && adduser -S -G redis -u 1001 redis && \
     apk add --no-cache bash
